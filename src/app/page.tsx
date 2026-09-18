@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { CATEGORIES, CATEGORY_LABELS, type Evidence } from "@/lib/categories";
 import type { Classification, Signal } from "@/lib/classify";
 
@@ -25,6 +27,69 @@ const QUALITY_LABELS = ["Thin", "Partial", "Strong"];
 const AS_OF_DATE = new Date().toISOString().slice(0, 10);
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
+
+function parseMetrics(content: string): Record<string, unknown> | null {
+  if (!content.startsWith("{")) return null;
+  try {
+    const parsed = JSON.parse(content);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function metricLabel(key: string) {
+  return key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function EvidenceContent({ content }: { content: string }) {
+  const metrics = parseMetrics(content);
+  if (metrics) {
+    return (
+      <dl className="mt-3 grid overflow-hidden border border-[#202320] sm:grid-cols-2">
+        {Object.entries(metrics).map(([key, value]) => (
+          <div key={key} className="min-w-0 border-b border-[#202320] p-2.5 odd:sm:border-r">
+            <dt className="text-[9px] uppercase tracking-[0.08em] text-[#555752]">{metricLabel(key)}</dt>
+            <dd className="mt-1 break-words text-[11px] leading-5 text-[#a5a7a0] [overflow-wrap:anywhere]">
+              {Array.isArray(value) ? value.join(" · ") : String(value)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
+
+  return (
+    <div className="mt-3 break-words text-[11px] leading-5 text-[#858781] [overflow-wrap:anywhere]">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        skipHtml
+        components={{
+          p: ({ children }) => <p className="my-2 first:mt-0 last:mb-0">{children}</p>,
+          h1: ({ children }) => <h3 className="mb-2 mt-4 text-sm font-bold text-[#e1e1db] first:mt-0">{children}</h3>,
+          h2: ({ children }) => <h3 className="mb-2 mt-4 text-xs font-bold uppercase tracking-[0.08em] text-[#d4d4ce] first:mt-0">{children}</h3>,
+          h3: ({ children }) => <h4 className="mb-1.5 mt-3 font-semibold text-[#c7c7c1] first:mt-0">{children}</h4>,
+          h4: ({ children }) => <h4 className="mb-1.5 mt-3 font-semibold text-[#b4b6af] first:mt-0">{children}</h4>,
+          ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5 marker:text-[#ffb000]">{children}</ul>,
+          ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5 marker:text-[#ffb000]">{children}</ol>,
+          strong: ({ children }) => <strong className="font-semibold text-[#d7d7d2]">{children}</strong>,
+          em: ({ children }) => <em className="text-[#aaa9a4]">{children}</em>,
+          blockquote: ({ children }) => <blockquote className="my-2 border-l-2 border-[#9b7cff] bg-[#0d0c13] px-3 py-1 text-[#aaa4bd]">{children}</blockquote>,
+          a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer noopener" className="text-[#ffb000] underline decoration-[#6e520b] underline-offset-2 hover:text-[#ffd166]">{children}</a>,
+          img: ({ src, alt }) => typeof src === "string" ? <a href={src} target="_blank" rel="noreferrer noopener" className="my-2 flex w-fit border border-[#343833] px-2 py-1 text-[9px] uppercase tracking-[0.08em] text-[#8f918a] hover:border-[#ffb000] hover:text-[#ffb000]">↗ {alt || "Open source image"}</a> : null,
+          code: ({ children }) => <code className="bg-[#151815] px-1 py-0.5 font-mono text-[10px] text-[#b8d7be]">{children}</code>,
+          pre: ({ children }) => <pre className="my-2 overflow-x-auto border border-[#252825] bg-black p-3 text-[10px] leading-5">{children}</pre>,
+          hr: () => <hr className="my-3 border-[#292c29]" />,
+          table: ({ children }) => <div className="my-3 overflow-x-auto border border-[#292c29]"><table className="w-full border-collapse text-left">{children}</table></div>,
+          th: ({ children }) => <th className="border-b border-r border-[#292c29] bg-[#111311] px-2 py-1.5 font-semibold text-[#c7c7c1] last:border-r-0">{children}</th>,
+          td: ({ children }) => <td className="border-b border-r border-[#202320] px-2 py-1.5 align-top last:border-r-0">{children}</td>,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 const STOCKS = [
   { symbol: "AAPL", name: "Apple" },
@@ -75,6 +140,7 @@ const STOCKS = [
   { symbol: "UBER", name: "Uber" },
   { symbol: "SHOP", name: "Shopify" },
   { symbol: "PLTR", name: "Palantir" },
+  { symbol: "NBIS", name: "Nebius Group" },
   { symbol: "COIN", name: "Coinbase" },
   { symbol: "MSTR", name: "MicroStrategy" },
   { symbol: "SMCI", name: "Super Micro Computer" },
@@ -425,16 +491,17 @@ function Result({ data, elapsedMs }: { data: AnalyzeResponse; elapsedMs: number 
           <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-[#ffb000]">Evidence monitor</h2>
           <span className="text-[10px] text-[#535550]">SELECT ROW TO EXPAND</span>
         </div>
-        <div className="grid gap-2 xl:grid-cols-2">
+        <div className="grid items-start gap-2 xl:grid-cols-2">
           {CATEGORIES.map((cat, categoryIndex) => {
             const signal = c.signals[cat].signal;
             const items = evidence[cat];
             return (
-              <details key={cat} className="group min-w-0 max-w-full border border-[#232623] bg-[#070807]">
-                <summary className="grid min-h-11 cursor-pointer list-none grid-cols-[26px_minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-3 text-xs marker:hidden hover:bg-[#0e100e]">
+              <details key={cat} className="group min-w-0 w-full max-w-full border border-[#232623] bg-[#070807]">
+                <summary className="grid min-h-11 cursor-pointer list-none grid-cols-[26px_minmax(0,1fr)_auto_auto_auto] items-center gap-2 px-3 py-3 text-xs marker:hidden hover:bg-[#0e100e]">
                   <span className="text-[#4b4d48]">0{categoryIndex + 1}</span>
                   <span className="font-semibold uppercase text-[#c3c3bd]">{CATEGORY_LABELS[cat]}</span>
                   <span className={`uppercase ${SIGNAL_STYLES[signal]}`}>{signal}</span>
+                  <span className="hidden text-[9px] text-[#555752] min-[480px]:inline">{items.length} SRC</span>
                   <span className="text-[#555752] group-open:rotate-45">+</span>
                 </summary>
                 <ul className="border-t border-[#232623]">
@@ -448,7 +515,7 @@ function Result({ data, elapsedMs }: { data: AnalyzeResponse; elapsedMs: number 
                             {item.title}
                           </a>
                           <p className="mt-1 break-words text-[10px] uppercase tracking-[0.06em] text-[#535550] [overflow-wrap:anywhere]">{item.source}{item.date && ` / ${item.date.slice(0, 10)}`}</p>
-                          <p className="mt-2 line-clamp-2 break-words leading-5 text-[#777974] [overflow-wrap:anywhere]">{item.snippet}</p>
+                          <EvidenceContent content={item.snippet} />
                         </div>
                       </div>
                     </li>

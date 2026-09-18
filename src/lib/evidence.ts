@@ -79,7 +79,17 @@ function summarizePrices(bars: Bar[]): string {
 function toSnippet(content: unknown): string {
   if (isPriceSeries(content)) return summarizePrices(content);
   const text = typeof content === "string" ? content : JSON.stringify(content);
-  return text.replace(/\s+/g, " ").trim().slice(0, SNIPPET_CHARS);
+  const normalized = text
+    .replace(/\r\n?/g, "\n")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  if (normalized.length <= SNIPPET_CHARS) return normalized;
+
+  const clipped = normalized.slice(0, SNIPPET_CHARS);
+  const boundary = Math.max(clipped.lastIndexOf("\n"), clipped.lastIndexOf(" "));
+  const snippet = `${clipped.slice(0, boundary > SNIPPET_CHARS * 0.8 ? boundary : SNIPPET_CHARS).trimEnd()}…`;
+  return snippet.replace(/\[([^\]]+)\]\([^)]*$/, "$1…");
 }
 
 /**
