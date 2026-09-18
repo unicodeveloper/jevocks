@@ -2,10 +2,10 @@
 
 Jevinik is a stock decision terminal that retrieves live market evidence with Valyu and estimates whether a stock will trade higher in 30 days.
 
-Users can compare two decision engines against the same evidence:
+Users can compare two decision engines against the same evidence to test which one reaches a decision faster:
 
-- **Jev**: a purpose-built evaluation model optimized for fast, structured decisions.
-- **GPT-5**: a general-purpose LLM comparison using structured output.
+- **Jev**: a purpose-built classifier that makes structured decisions without using an LLM.
+- **GPT-5**: a general-purpose LLM that makes the same decision using structured output.
 
 The interface reports the probability of a higher price, overall outlook, evidence quality, category-level signals, supporting sources, and end-to-end completion time.
 
@@ -14,7 +14,7 @@ The interface reports the probability of a higher price, overall outlook, eviden
 - Autocomplete for common US and European stocks
 - Five Valyu searches executed in parallel
 - Fast Valyu web mode for analyst and macro evidence
-- Jev and GPT-5 decision toggle
+- Jev classifier and GPT-5 LLM speed-comparison toggle
 - Bullish, neutral, and bearish signals by evidence category
 - Source-level evidence inspection
 - End-to-end request timing
@@ -31,7 +31,7 @@ The interface reports the probability of a higher price, overall outlook, eviden
    - Analyst views
    - Macro risks
 4. Price history is condensed into returns, range, volume, and recent-close statistics.
-5. The selected engine evaluates the same compact evidence state.
+5. The selected engine evaluates the same compact evidence state, using either the non-LLM Jev classifier or the GPT-5 LLM.
 6. The API returns the probability, outlook, evidence quality, category signals, and source evidence.
 
 SEC filings are currently disabled in the application flow. The Valyu SEC source can be re-enabled later when desired.
@@ -109,13 +109,13 @@ Do not commit `.env.local`. It is ignored by Git.
 
 ### Jev
 
-Jev uses the AI SDK evaluation API through `experimental_evaluate` and model `typesafe-ai/jev`. It answers typed boolean, score, and choice questions against one shared evidence state.
+Jev is used as a classifier without an LLM. It uses the AI SDK evaluation API through `experimental_evaluate` and model `typesafe-ai/jev` to answer typed boolean, score, and choice questions against one shared evidence state.
 
-Jev is the default because it is substantially faster for this structured decision workflow.
+Jev is the default because it is designed to make this structured decision substantially faster than a general-purpose LLM.
 
 ### GPT-5
 
-The LLM path uses AI SDK `generateObject` with a Zod schema so its response matches the Jev classification contract.
+The LLM path uses AI SDK `generateObject` with a Zod schema so its response matches the Jev classification contract. This makes the UI toggle a direct comparison between Jev classification and an LLM making the same decision.
 
 The default model is:
 
@@ -203,7 +203,7 @@ Every Valyu category failed or returned no results. Check the server logs for ca
 
 ### GPT-5 is much slower than Jev
 
-This is expected. Jev is optimized for typed evaluation, while GPT-5 performs a general-purpose structured generation request.
+This is expected. Jev performs purpose-built classification without an LLM, while GPT-5 performs a general-purpose LLM structured generation request. The toggle exists to make that decision-speed difference visible.
 
 ## Project Structure
 
