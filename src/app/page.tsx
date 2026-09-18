@@ -2,11 +2,10 @@
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import { CATEGORIES, CATEGORY_LABELS, type Evidence } from "@/lib/categories";
-import type { Classification, DecisionEngine, Signal } from "@/lib/classify";
+import type { Classification, Signal } from "@/lib/classify";
 
 type AnalyzeResponse = {
   ticker: string;
-  decisionEngine: DecisionEngine;
   evidence: Evidence;
   classification: Classification;
   timing: {
@@ -140,7 +139,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
-  const [decisionEngine, setDecisionEngine] = useState<DecisionEngine>("jev");
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const normalizedTicker = normalizeTicker(ticker);
   const suggestions = normalizedTicker
@@ -165,7 +163,7 @@ export default function Home() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticker: symbol, decisionEngine }),
+        body: JSON.stringify({ ticker: symbol }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Request failed");
@@ -209,7 +207,30 @@ export default function Home() {
           <span className="mr-8 text-[#ffb000]">EQUITIES</span>
           <span className="mr-8">US + EU</span>
           <span className="mr-8">VALYU DATA</span>
-          <span className="mr-auto">JEV / GPT-5</span>
+          <span className="mr-auto flex items-center gap-2 text-[#ffb000]">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 68 24"
+              className="h-6 w-[68px] overflow-visible"
+              fill="none"
+            >
+              <path
+                d="M2 17c8-14 20-14 22-4 2 9-13 8-9-1 4-8 17-8 27-2 6 4 12 4 20 1"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="m56 6 7 5-7 5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>JEV EVALUATION</span>
+          </span>
           <span>AS OF {AS_OF_DATE}</span>
         </nav>
 
@@ -221,7 +242,7 @@ export default function Home() {
               </label>
               <span className="text-[10px] text-[#555752]">ENTER TO EXECUTE</span>
             </div>
-            <div className="grid gap-2 lg:grid-cols-[minmax(260px,1fr)_auto_auto]">
+            <div className="grid gap-2 sm:grid-cols-[minmax(260px,1fr)_auto]">
               <div className="relative min-w-0">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[#ffb000]">&gt;</span>
                 <input
@@ -253,27 +274,6 @@ export default function Home() {
                 ) : null}
               </div>
 
-              <fieldset className="grid grid-cols-2 border border-[#3a3d39]" aria-label="Decision engine">
-                <legend className="sr-only">Decision engine</legend>
-                {(["jev", "llm"] as const).map((engine) => {
-                  const selected = decisionEngine === engine;
-                  return (
-                    <button
-                      key={engine}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      onClick={() => setDecisionEngine(engine)}
-                      className={`h-11 min-w-24 border-r border-[#3a3d39] px-4 text-xs font-semibold uppercase last:border-r-0 focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#ffb000] ${
-                        selected ? "bg-[#ffb000] text-black" : "bg-[#090a09] text-[#73756f] hover:text-[#d7d7d2]"
-                      }`}
-                    >
-                      {engine === "jev" ? "JEV" : "GPT-5"}
-                    </button>
-                  );
-                })}
-              </fieldset>
-
               <button
                 type="submit"
                 disabled={loading || !normalizedTicker}
@@ -289,7 +289,7 @@ export default function Home() {
           <section className="border-b border-[#292c29] bg-black p-5" aria-live="polite">
             <div className="flex items-center justify-between text-xs">
               <span className="text-[#ffb000]">PROCESSING {normalizedTicker}</span>
-              <span className="text-[#666863]">VALYU SEARCH → {decisionEngine === "jev" ? "JEV EVALUATE" : "GPT-5 INFERENCE"}</span>
+              <span className="text-[#666863]">VALYU SEARCH → JEV EVALUATE</span>
             </div>
             <div className="mt-4 h-1 overflow-hidden bg-[#222422]">
               <div className="analysis-scan h-full w-1/3 bg-[#ffb000]" />
@@ -313,7 +313,7 @@ export default function Home() {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ffb000]">Ready for command</p>
                 <h1 className="mt-4 text-2xl font-medium tracking-[-0.03em] text-[#e8e8e2] sm:text-3xl">Evidence-backed equity decisions</h1>
                 <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-[#686a65]">
-                  Enter a US or European ticker. Jev prioritizes speed; GPT-5 provides the general-model comparison.
+                  Enter a US or European ticker. Jev evaluates live evidence and returns a structured 30-day outlook.
                 </p>
                 <div className="mt-7 flex flex-wrap justify-center gap-2">
                   {["AAPL", "NVDA", "TSLA", "ASML.AS"].map((symbol) => (
@@ -330,7 +330,6 @@ export default function Home() {
                 <div className="flex justify-between border-b border-[#1a1c1a] pb-2"><dt>Market data</dt><dd className="text-[#44d071]">ONLINE</dd></div>
                 <div className="flex justify-between border-b border-[#1a1c1a] pb-2"><dt>News search</dt><dd className="text-[#44d071]">ONLINE</dd></div>
                 <div className="flex justify-between border-b border-[#1a1c1a] pb-2"><dt>Jev evaluator</dt><dd className="text-[#44d071]">READY</dd></div>
-                <div className="flex justify-between border-b border-[#1a1c1a] pb-2"><dt>GPT-5</dt><dd className="text-[#44d071]">READY</dd></div>
               </dl>
             </aside>
           </section>
@@ -351,7 +350,7 @@ function Result({ data, elapsedMs }: { data: AnalyzeResponse; elapsedMs: number 
         <span className="text-base font-bold text-[#ffb000]">{ticker}</span>
         <span className="text-[#858781]">30-DAY OUTLOOK</span>
         <span className="text-[#3f413d]">|</span>
-        <span className="text-[#9b7cff]">{data.decisionEngine === "jev" ? "JEV" : "GPT-5"}</span>
+        <span className="text-[#9b7cff]">JEV</span>
         <span className="w-full text-right text-[#656762] min-[400px]:ml-auto min-[400px]:w-auto">COMPLETE IN <strong className="text-[#e4e4de]">{elapsedMs === null ? "--" : `${(elapsedMs / 1000).toFixed(1)}S`}</strong></span>
       </div>
 
@@ -380,7 +379,7 @@ function Result({ data, elapsedMs }: { data: AnalyzeResponse; elapsedMs: number 
               </div>
               <div className="p-3">
                 <dt className="text-[#5e605b]">ENGINE</dt>
-                <dd className="mt-1 font-semibold text-[#9b7cff]">{data.decisionEngine === "jev" ? "JEV" : "GPT-5"}</dd>
+                <dd className="mt-1 font-semibold text-[#9b7cff]">JEV</dd>
               </div>
               <div className="border-r border-t border-[#202320] p-3">
                 <dt className="text-[#5e605b]">DATA TIME</dt>
