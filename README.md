@@ -2,12 +2,12 @@
 
 Jevinik is a stock decision terminal that retrieves live market evidence with Valyu and estimates whether a stock will trade higher in 30 days.
 
-Users can compare two decision engines against the same evidence to test which one reaches a decision faster:
+Users can compare two decision engines against the same evidence shape to test which one reaches a decision faster:
 
-- **Jev**: a purpose-built classifier that makes structured decisions without using an LLM.
+- **Jev**: TypeSafe AI's System One evaluation model. It makes typed, probabilistic decisions without calling a general-purpose generative LLM.
 - **GPT-5**: a general-purpose LLM that makes the same decision using structured output.
 
-The interface reports the probability of a higher price, overall outlook, evidence quality, category-level signals, supporting sources, and end-to-end completion time.
+The interface reports the probability of a higher price, overall outlook, evidence quality, category-level signals, supporting sources, evidence retrieval time, decision time, and browser-observed completion time.
 
 ## Features
 
@@ -17,7 +17,7 @@ The interface reports the probability of a higher price, overall outlook, eviden
 - Jev classifier and GPT-5 LLM speed-comparison toggle
 - Bullish, neutral, and bearish signals by evidence category
 - Source-level evidence inspection
-- End-to-end request timing
+- Separate evidence, decision, and end-to-end timing
 - Responsive Bloomberg-inspired terminal interface
 
 ## How It Works
@@ -31,14 +31,14 @@ The interface reports the probability of a higher price, overall outlook, eviden
    - Analyst views
    - Macro risks
 4. Price history is condensed into returns, range, volume, and recent-close statistics.
-5. The selected engine evaluates the same compact evidence state, using either the non-LLM Jev classifier or the GPT-5 LLM.
-6. The API returns the probability, outlook, evidence quality, category signals, and source evidence.
+5. The selected engine evaluates the same compact evidence state, using either Jev's evaluation API or GPT-5 structured generation.
+6. The API returns the probability, outlook, evidence quality, category signals, source evidence, and server-side timing breakdown.
 
 SEC filings are currently disabled in the application flow. The Valyu SEC source can be re-enabled later when desired.
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 20.9.0 or newer
 - npm
 - A Valyu API key
 - A Vercel AI Gateway API key
@@ -68,6 +68,12 @@ Vercel AI Gateway routes requests to both `typesafe-ai/jev` and the configured L
 4. Add the key to `AI_GATEWAY_API_KEY` in `.env.local`.
 
 AI Gateway documentation: [vercel.com/docs/ai-gateway](https://vercel.com/docs/ai-gateway)
+
+Model references:
+
+- [Jev on Vercel AI Gateway](https://vercel.com/ai-gateway/models/jev)
+- [GPT-5 on Vercel AI Gateway](https://vercel.com/ai-gateway/models/gpt-5)
+- [AI SDK TypeSafe provider](https://ai-sdk.dev/providers/ai-sdk-providers/typesafe-ai)
 
 ## Local Setup
 
@@ -109,13 +115,13 @@ Do not commit `.env.local`. It is ignored by Git.
 
 ### Jev
 
-Jev is used as a classifier without an LLM. It uses the AI SDK evaluation API through `experimental_evaluate` and model `typesafe-ai/jev` to answer typed boolean, score, and choice questions against one shared evidence state.
+Jev is not used as a text-generating LLM. TypeSafe AI describes it as a System One evaluation model: a distinct model class built for fast, structured decisions in software. This app calls it through AI SDK `experimental_evaluate` with model `typesafe-ai/jev` to answer typed boolean, score, and choice questions against one shared evidence state.
 
 Jev is the default because it is designed to make this structured decision substantially faster than a general-purpose LLM.
 
 ### GPT-5
 
-The LLM path uses AI SDK `generateObject` with a Zod schema so its response matches the Jev classification contract. This makes the UI toggle a direct comparison between Jev classification and an LLM making the same decision.
+The LLM path uses AI SDK `generateObject` with a Zod schema so its response matches the Jev classification contract. This makes the UI toggle a comparison between Jev evaluation and an LLM making the same typed decision.
 
 The default model is:
 
@@ -157,6 +163,17 @@ The response contains:
 - Outlook score and label
 - Evidence quality score
 - Category-level signals
+- Evidence retrieval, decision, and total server timing
+
+## Timing
+
+The UI exposes three different measurements:
+
+- **Data time**: server time spent retrieving and compacting Valyu evidence.
+- **Decision time**: server time spent calling the selected decision engine and mapping its response.
+- **Complete in**: browser-observed time for the entire request, including network transfer and client processing.
+
+Use **decision time** when comparing Jev with GPT-5. Run the same ticker more than once because provider and network latency vary between requests. The two modes execute separate requests, so their Valyu results can also differ slightly as live sources change.
 
 ## Scripts
 
@@ -203,7 +220,7 @@ Every Valyu category failed or returned no results. Check the server logs for ca
 
 ### GPT-5 is much slower than Jev
 
-This is expected. Jev performs purpose-built classification without an LLM, while GPT-5 performs a general-purpose LLM structured generation request. The toggle exists to make that decision-speed difference visible.
+This is expected for this workflow. Jev performs purpose-built System One evaluation without a general-purpose generative LLM call, while GPT-5 performs structured generation. Compare the displayed decision times rather than total completion times.
 
 ## Project Structure
 

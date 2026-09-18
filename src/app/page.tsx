@@ -9,6 +9,11 @@ type AnalyzeResponse = {
   decisionEngine: DecisionEngine;
   evidence: Evidence;
   classification: Classification;
+  timing: {
+    evidenceMs: number;
+    decisionMs: number;
+    totalMs: number;
+  };
 };
 
 const SIGNAL_STYLES: Record<Signal, string> = {
@@ -227,7 +232,7 @@ export default function Home() {
                   placeholder="TYPE TICKER OR COMPANY"
                   maxLength={10}
                   autoComplete="off"
-                  className="h-11 w-full border border-[#3a3d39] bg-black pl-8 pr-3 text-sm uppercase tracking-[0.08em] text-[#f0f0ea] outline-none placeholder:text-[#41433f] focus:border-[#ffb000]"
+                  className="h-11 w-full border border-[#3a3d39] bg-black pl-8 pr-3 text-base uppercase tracking-[0.08em] text-[#f0f0ea] outline-none placeholder:text-[#41433f] focus:border-[#ffb000] sm:text-sm"
                 />
                 {suggestions.length > 0 && normalizedTicker !== topSuggestion?.symbol ? (
                   <div className="absolute left-0 right-0 top-full z-10 border border-[#3a3d39] bg-[#070807] shadow-2xl">
@@ -237,7 +242,7 @@ export default function Home() {
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => void analyze(stock.symbol)}
-                        className="grid w-full grid-cols-[24px_90px_1fr] items-center border-b border-[#171917] px-3 py-2 text-left text-xs last:border-0 hover:bg-[#16130a] focus-visible:bg-[#16130a] focus-visible:outline-none"
+                        className="grid min-h-11 w-full grid-cols-[24px_90px_minmax(0,1fr)] items-center border-b border-[#171917] px-3 py-2 text-left text-xs last:border-0 hover:bg-[#16130a] focus-visible:bg-[#16130a] focus-visible:outline-none"
                       >
                         <span className="text-[#4b4d48]">{index + 1}</span>
                         <span className="font-semibold text-[#ffb000]">{stock.symbol}</span>
@@ -259,7 +264,7 @@ export default function Home() {
                       role="radio"
                       aria-checked={selected}
                       onClick={() => setDecisionEngine(engine)}
-                      className={`h-[42px] min-w-24 border-r border-[#3a3d39] px-4 text-xs font-semibold uppercase last:border-r-0 focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#ffb000] ${
+                      className={`h-11 min-w-24 border-r border-[#3a3d39] px-4 text-xs font-semibold uppercase last:border-r-0 focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#ffb000] ${
                         selected ? "bg-[#ffb000] text-black" : "bg-[#090a09] text-[#73756f] hover:text-[#d7d7d2]"
                       }`}
                     >
@@ -312,7 +317,7 @@ export default function Home() {
                 </p>
                 <div className="mt-7 flex flex-wrap justify-center gap-2">
                   {["AAPL", "NVDA", "TSLA", "ASML.AS"].map((symbol) => (
-                    <button key={symbol} type="button" onClick={() => void analyze(symbol)} className="border border-[#30332f] px-3 py-2 text-xs text-[#969892] hover:border-[#ffb000] hover:text-[#ffb000]">
+                    <button key={symbol} type="button" onClick={() => void analyze(symbol)} className="min-h-11 border border-[#30332f] px-3 py-2 text-xs text-[#969892] hover:border-[#ffb000] hover:text-[#ffb000]">
                       {symbol}
                     </button>
                   ))}
@@ -347,7 +352,7 @@ function Result({ data, elapsedMs }: { data: AnalyzeResponse; elapsedMs: number 
         <span className="text-[#858781]">30-DAY OUTLOOK</span>
         <span className="text-[#3f413d]">|</span>
         <span className="text-[#9b7cff]">{data.decisionEngine === "jev" ? "JEV" : "GPT-5"}</span>
-        <span className="ml-auto text-[#656762]">COMPLETE IN <strong className="text-[#e4e4de]">{elapsedMs === null ? "--" : `${(elapsedMs / 1000).toFixed(1)}S`}</strong></span>
+        <span className="w-full text-right text-[#656762] min-[400px]:ml-auto min-[400px]:w-auto">COMPLETE IN <strong className="text-[#e4e4de]">{elapsedMs === null ? "--" : `${(elapsedMs / 1000).toFixed(1)}S`}</strong></span>
       </div>
 
       <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
@@ -376,6 +381,14 @@ function Result({ data, elapsedMs }: { data: AnalyzeResponse; elapsedMs: number 
               <div className="p-3">
                 <dt className="text-[#5e605b]">ENGINE</dt>
                 <dd className="mt-1 font-semibold text-[#9b7cff]">{data.decisionEngine === "jev" ? "JEV" : "GPT-5"}</dd>
+              </div>
+              <div className="border-r border-t border-[#202320] p-3">
+                <dt className="text-[#5e605b]">DATA TIME</dt>
+                <dd className="mt-1 font-semibold text-[#e0e0da]">{(data.timing.evidenceMs / 1000).toFixed(1)}S</dd>
+              </div>
+              <div className="border-t border-[#202320] p-3">
+                <dt className="text-[#5e605b]">DECISION TIME</dt>
+                <dd className="mt-1 font-semibold text-[#ffb000]">{(data.timing.decisionMs / 1000).toFixed(1)}S</dd>
               </div>
             </dl>
           </div>
@@ -414,8 +427,8 @@ function Result({ data, elapsedMs }: { data: AnalyzeResponse; elapsedMs: number 
             const signal = c.signals[cat].signal;
             const items = evidence[cat];
             return (
-              <details key={cat} className="group border border-[#232623] bg-[#070807]">
-                <summary className="grid cursor-pointer list-none grid-cols-[26px_1fr_auto_auto] items-center gap-2 px-3 py-3 text-xs marker:hidden hover:bg-[#0e100e]">
+              <details key={cat} className="group min-w-0 max-w-full border border-[#232623] bg-[#070807]">
+                <summary className="grid min-h-11 cursor-pointer list-none grid-cols-[26px_minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-3 text-xs marker:hidden hover:bg-[#0e100e]">
                   <span className="text-[#4b4d48]">0{categoryIndex + 1}</span>
                   <span className="font-semibold uppercase text-[#c3c3bd]">{CATEGORY_LABELS[cat]}</span>
                   <span className={`uppercase ${SIGNAL_STYLES[signal]}`}>{signal}</span>
@@ -425,14 +438,14 @@ function Result({ data, elapsedMs }: { data: AnalyzeResponse; elapsedMs: number 
                   {items.length === 0 ? <li className="px-3 py-4 text-xs text-[#5d5f5a]">NO RESULTS</li> : null}
                   {items.map((item, index) => (
                     <li key={`${item.url}-${index}`} className="border-b border-[#171917] px-3 py-3 text-xs last:border-b-0">
-                      <div className="grid grid-cols-[20px_1fr] gap-2">
+                      <div className="grid min-w-0 grid-cols-[20px_minmax(0,1fr)] gap-2">
                         <span className="text-[#444641]">{index + 1}</span>
-                        <div>
-                          <a href={item.url} target="_blank" rel="noreferrer" className="leading-5 text-[#c7c7c1] hover:text-[#ffb000] hover:underline">
+                        <div className="min-w-0">
+                          <a href={item.url} target="_blank" rel="noreferrer" className="break-words leading-5 text-[#c7c7c1] [overflow-wrap:anywhere] hover:text-[#ffb000] hover:underline">
                             {item.title}
                           </a>
-                          <p className="mt-1 text-[10px] uppercase tracking-[0.06em] text-[#535550]">{item.source}{item.date && ` / ${item.date.slice(0, 10)}`}</p>
-                          <p className="mt-2 line-clamp-2 leading-5 text-[#777974]">{item.snippet}</p>
+                          <p className="mt-1 break-words text-[10px] uppercase tracking-[0.06em] text-[#535550] [overflow-wrap:anywhere]">{item.source}{item.date && ` / ${item.date.slice(0, 10)}`}</p>
+                          <p className="mt-2 line-clamp-2 break-words leading-5 text-[#777974] [overflow-wrap:anywhere]">{item.snippet}</p>
                         </div>
                       </div>
                     </li>

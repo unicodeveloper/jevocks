@@ -14,6 +14,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const startedAt = performance.now();
   const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
@@ -22,12 +23,24 @@ export async function POST(req: Request) {
 
   try {
     const evidence = await gatherEvidence(ticker);
+    const evidenceCompletedAt = performance.now();
     const total = Object.values(evidence).reduce((n, items) => n + items.length, 0);
     if (total === 0) {
       return Response.json({ error: `No evidence found for ${ticker}` }, { status: 404 });
     }
     const classification = await classify(ticker, evidence, decisionEngine);
-    return Response.json({ ticker, decisionEngine, evidence, classification });
+    const completedAt = performance.now();
+    return Response.json({
+      ticker,
+      decisionEngine,
+      evidence,
+      classification,
+      timing: {
+        evidenceMs: Math.round(evidenceCompletedAt - startedAt),
+        decisionMs: Math.round(completedAt - evidenceCompletedAt),
+        totalMs: Math.round(completedAt - startedAt),
+      },
+    });
   } catch (err) {
     console.error("[analyze]", err);
     const message = err instanceof Error ? err.message : "Analysis failed";
